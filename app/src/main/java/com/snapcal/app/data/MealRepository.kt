@@ -229,12 +229,13 @@ class MealRepository(
         val config = currentConfig()
         val started = System.currentTimeMillis()
         val result = runCatching { Analyzers.create(config).analyze(photos.map(Images::toPayload), note) }
-        val paths = photos.map { Images.saveMealPhoto(context, it) }
         val analysis = result.getOrElse { e ->
             // Keep failures too (mealId 0 = no meal created).
             logAiCall(0, config, note, photos.size, started, null, e)
             throw e
         }.analysis
+        // Persist photos only once there is a meal to attach them to.
+        val paths = photos.map { Images.saveMealPhoto(context, it) }
         val meal = Meal(
             eatenAt = eatenAt,
             day = Days.dayOf(eatenAt),
