@@ -121,6 +121,7 @@ object MiBeacon {
             val obj = payload.copyOfRange(p + 3, end)
             frames += when (objId) {
                 0x6E16 -> decodeBodyComposition(obj, model, packetId)
+                0x4E16 -> decodeS200Weight(obj, model, packetId)
                 else -> Unsupported(model, packetId, objId)
             }
             p = end
@@ -144,6 +145,23 @@ object MiBeacon {
             impedanceOhm = if (imp != 0) imp / 10.0 else null,
             isHighFrequency = mass == 0 && hr == 0 && imp != 0,
             isReset = mass == 0 && hr == 0 && imp == 0,
+        )
+    }
+
+    /** S200 object 0x4E16: profile (1) + weight in 0.01 kg (u32) + timestamp (u32). Weight only, no impedance. */
+    private fun decodeS200Weight(obj: ByteArray, model: Model, packetId: Int): Frame {
+        if (obj.size != 9) return Unsupported(model, packetId, 0x4E16)
+        val profileId = u8(obj, 0)
+        val raw = (u8(obj, 1).toLong()) or (u8(obj, 2).toLong() shl 8) or (u8(obj, 3).toLong() shl 16) or (u8(obj, 4).toLong() shl 24)
+        return BodyComposition(
+            model = model,
+            packetId = packetId,
+            profileId = profileId,
+            massKg = if (raw != 0L) raw / 100.0 else null,
+            heartRate = null,
+            impedanceOhm = null,
+            isHighFrequency = false,
+            isReset = raw == 0L,
         )
     }
 

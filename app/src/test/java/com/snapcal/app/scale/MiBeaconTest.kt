@@ -48,6 +48,16 @@ class MiBeaconTest {
         assertNull(f.impedanceOhm)
     }
 
+    @Test fun decodesS200WeightObject() {
+        // b"HY\x04L\x01\x9a\x80\xa2u\x93\x90\x10\xf0\xab\xc4\xfa\xdc\x06\x00\x00=)\xc0D"
+        val d = bytes(0x48, 0x59, 0x04, 0x4c, 0x01, 0x9a, 0x80, 0xa2, 0x75, 0x93, 0x90, 0x10, 0xf0, 0xab, 0xc4, 0xfa, 0xdc, 0x06, 0x00, 0x00, 0x3d, 0x29, 0xc0, 0x44)
+        val f = body(MiBeacon.parse(d, "D0:7B:6F:27:D7:29", MiBeacon.parseKey("653b1b10e1cb35e4ac5e60fa45f3bf29")))
+        assertEquals(MiBeacon.Model.S200, f.model)
+        assertEquals(62.25, f.massKg!!, 1e-9)
+        assertEquals(1, f.profileId)
+        assertNull(f.impedanceOhm)
+    }
+
     @Test fun wrongKeyIsRejectedByAuthTag() {
         val wrong = MiBeacon.parseKey("00000000000000000000000000000000")
         assertEquals(MiBeacon.Result.BadKey, MiBeacon.parse(s400First, mac, wrong))
