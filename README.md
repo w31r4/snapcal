@@ -96,3 +96,9 @@ app/src/main/java/com/snapcal/app/
   ui/       Compose 界面（首页 / 拍照 / 明细编辑 / 历史 / 设置）
   util/     图片压缩旋转、日期工具
 ```
+
+## 许可证
+
+[MIT](LICENSE)。米家 MiBeacon 协议解析参考了 Home Assistant [xiaomi-ble](https://github.com/Bluetooth-Devices/xiaomi-ble)（Apache-2.0）。
+
+本应用的热量与身体成分估算仅供参考，不构成医疗建议。
