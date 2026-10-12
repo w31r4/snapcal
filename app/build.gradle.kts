@@ -14,8 +14,22 @@ android {
         applicationId = "com.snapcal.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        // CI passes these from the git tag (v1.2.3 → versionName 1.2.3, versionCode = run number).
+        versionCode = (System.getenv("VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("VERSION_NAME") ?: "0.4.0-dev"
+    }
+
+    signingConfigs {
+        // Stable release key from CI secrets, so every published APK installs over the previous one.
+        val ks = System.getenv("SIGNING_KEYSTORE_PATH")
+        if (ks != null && file(ks).exists()) {
+            create("release") {
+                storeFile = file(ks)
+                storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+                keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+                keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -23,8 +37,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Personal sideload build: sign with the debug key so `assembleRelease` yields an installable APK.
-            signingConfig = signingConfigs.getByName("debug")
+            // Release key when provided (CI); otherwise the local debug key so `assembleRelease` still yields an installable APK.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
