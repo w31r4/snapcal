@@ -42,6 +42,12 @@
 每个服务商都可以填 **自定义 Base URL**（走代理或兼容网关时用）。
 Key 只存在手机本地（SharedPreferences，已关闭备份），不会进仓库。
 
+## 下载
+
+到 [Releases](https://github.com/w31r4/snapcal/releases/latest) 下载最新的 `snapcal-x.y.z.apk`，在手机上直接安装。所有版本使用同一个签名，新版可直接覆盖安装，数据保留。
+
+发布新版本：`git tag v0.5.0 && git push origin v0.5.0`，GitHub Actions 会自动测试、签名并发布。
+
 ## 构建
 
 需要 JDK 17 和 Android SDK（platform 36）。本机已经装好：
