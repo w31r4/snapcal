@@ -60,13 +60,13 @@ class MealRepository(
     /**
      * Automatic weigh-in from the scale. Keeps the first reading of the day (closest to a fasted morning
      * weight; foot-to-foot impedance also drifts ~30 Ω over the day, Oshima 2006). Plausibility-checked
-     * against the latest weight so a family member on the same profile doesn't pollute the trend.
+     * against recent weights so a family member on the same profile doesn't pollute the trend.
      */
     suspend fun logWeighIn(w: WeighIn) {
         val day = Days.dayOf(w.atMillis)
         val disposition = when {
             weightDao.get(day) != null -> "later_same_day"
-            !isPlausible(w.massKg, LocalDate.parse(day)) -> "implausible"
+            !isPlausible(w.massKg, day) -> "implausible"
             else -> "used"
         }
         rawDao.insertReading(
@@ -87,11 +87,11 @@ class MealRepository(
      * Rejects readings far from the user's *recent* weight (likely a family member on the same profile).
      * Only weights from the last 14 days count as reference, so after a break the user is never locked out.
      */
-    private suspend fun isPlausible(kg: Double, day: LocalDate): Boolean {
-        val recent = weightDao.since(day.minusDays(PLAUSIBILITY_WINDOW_DAYS).toString()).filter { it.day < day.toString() }
+    private suspend fun isPlausible(kg: Double, day: String): Boolean {
+        val from = Days.parse(day).minusDays(PLAUSIBILITY_WINDOW_DAYS).toString()
+        val recent = weightDao.since(from).filter { it.day < day }
         if (recent.isEmpty()) return true
-        val ref = recent.map { it.kg }.sorted()[recent.size / 2]
-        return kotlin.math.abs(kg - ref) <= PLAUSIBILITY_MAX_DIFF_KG
+        return kotlin.math.abs(kg - Trend.median(recent.map { it.kg })) <= PLAUSIBILITY_MAX_DIFF_KG
     }
 
     suspend fun logOtherProfileReading(w: WeighIn) {
