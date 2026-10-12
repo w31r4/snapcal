@@ -64,10 +64,9 @@ class MealRepository(
      */
     suspend fun logWeighIn(w: WeighIn) {
         val day = Days.dayOf(w.atMillis)
-        val latest = weightDao.latest()
         val disposition = when {
             weightDao.get(day) != null -> "later_same_day"
-            latest != null && kotlin.math.abs(w.massKg - latest.kg) > 5.0 -> "implausible"
+            !isPlausible(w.massKg, LocalDate.parse(day)) -> "implausible"
             else -> "used"
         }
         rawDao.insertReading(
@@ -82,6 +81,17 @@ class MealRepository(
         )
         updateProfileWeight()
         if (settings.healthSync) runCatching { health.writeWeight(w.massKg, Instant.ofEpochMilli(w.atMillis)) }
+    }
+
+    /**
+     * Rejects readings far from the user's *recent* weight (likely a family member on the same profile).
+     * Only weights from the last 14 days count as reference, so after a break the user is never locked out.
+     */
+    private suspend fun isPlausible(kg: Double, day: LocalDate): Boolean {
+        val recent = weightDao.since(day.minusDays(PLAUSIBILITY_WINDOW_DAYS).toString()).filter { it.day < day.toString() }
+        if (recent.isEmpty()) return true
+        val ref = recent.map { it.kg }.sorted()[recent.size / 2]
+        return kotlin.math.abs(kg - ref) <= PLAUSIBILITY_MAX_DIFF_KG
     }
 
     suspend fun logOtherProfileReading(w: WeighIn) {
@@ -327,5 +337,7 @@ class MealRepository(
 
     companion object {
         private const val TAG = "MealRepository"
+        private const val PLAUSIBILITY_WINDOW_DAYS = 14L
+        private const val PLAUSIBILITY_MAX_DIFF_KG = 5.0
     }
 }
