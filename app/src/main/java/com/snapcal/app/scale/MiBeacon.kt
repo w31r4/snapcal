@@ -29,12 +29,12 @@ object MiBeacon {
         val packetId: Int
     }
 
-    /** S400 object 0x6E16 (one advertisement of a weigh-in sequence). */
+    /** One weigh-in advertisement: S400 object 0x6E16, or S200 object 0x4E16 (weight only). */
     data class BodyComposition(
         override val model: Model,
         override val packetId: Int,
         val profileId: Int,
-        /** kg, or null on the final packet (which carries only the high-frequency impedance). */
+        /** kg, or null on the S400's final packet (which carries only the high-frequency impedance). */
         val massKg: Double?,
         val heartRate: Int?,
         val impedanceOhm: Double?,
@@ -122,17 +122,17 @@ object MiBeacon {
             frames += when (objId) {
                 0x6E16 -> decodeBodyComposition(obj, model, packetId)
                 0x4E16 -> decodeS200Weight(obj, model, packetId)
-                else -> Unsupported(model, packetId, objId)
-            }
+                else -> null
+            } ?: Unsupported(model, packetId, objId)
             p = end
         }
         return Result.Ok(frames)
     }
 
-    private fun decodeBodyComposition(obj: ByteArray, model: Model, packetId: Int): Frame {
-        if (obj.size < 5) return Unsupported(model, packetId, 0x6E16)
+    private fun decodeBodyComposition(obj: ByteArray, model: Model, packetId: Int): Frame? {
+        if (obj.size < 5) return null
         val profileId = u8(obj, 0)
-        val data = (u8(obj, 1).toLong()) or (u8(obj, 2).toLong() shl 8) or (u8(obj, 3).toLong() shl 16) or (u8(obj, 4).toLong() shl 24)
+        val data = u32le(obj, 1)
         val mass = (data and 0x7FF).toInt()
         val hr = ((data shr 11) and 0x7F).toInt()
         val imp = (data ushr 18).toInt()
@@ -149,10 +149,10 @@ object MiBeacon {
     }
 
     /** S200 object 0x4E16: profile (1) + weight in 0.01 kg (u32) + timestamp (u32). Weight only, no impedance. */
-    private fun decodeS200Weight(obj: ByteArray, model: Model, packetId: Int): Frame {
-        if (obj.size != 9) return Unsupported(model, packetId, 0x4E16)
+    private fun decodeS200Weight(obj: ByteArray, model: Model, packetId: Int): Frame? {
+        if (obj.size != 9) return null
         val profileId = u8(obj, 0)
-        val raw = (u8(obj, 1).toLong()) or (u8(obj, 2).toLong() shl 8) or (u8(obj, 3).toLong() shl 16) or (u8(obj, 4).toLong() shl 24)
+        val raw = u32le(obj, 1)
         return BodyComposition(
             model = model,
             packetId = packetId,
@@ -166,6 +166,9 @@ object MiBeacon {
     }
 
     private fun u8(b: ByteArray, i: Int) = b[i].toInt() and 0xFF
+
+    private fun u32le(b: ByteArray, i: Int): Long =
+        u8(b, i).toLong() or (u8(b, i + 1).toLong() shl 8) or (u8(b, i + 2).toLong() shl 16) or (u8(b, i + 3).toLong() shl 24)
 
     fun parseKey(hex: String): ByteArray? {
         val h = hex.trim().lowercase().replace(" ", "")
