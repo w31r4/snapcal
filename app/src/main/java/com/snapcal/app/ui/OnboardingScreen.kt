@@ -86,8 +86,9 @@ fun OnboardingScreen(vm: MainViewModel) {
     fun finish() {
         vm.settings.profile = profile()
         if (firstRun) vm.settings.trackingStartEpochDay = java.time.LocalDate.now().toEpochDay()
-        // Onboarding weight doubles as today's weigh-in.
-        weightN?.let { vm.logWeight(it) }
+        // On first run the entered weight doubles as today's weigh-in. A re-plan must not log one: the field is
+        // pre-filled from the latest (possibly old) weight and would overwrite today's scale reading.
+        if (firstRun) weightN?.let { vm.logWeight(it) }
         vm.settings.onboarded = true
         vm.profileChanged()
         vm.finishOnboarding()
