@@ -39,8 +39,7 @@ object PhotoCalibration {
         val logs = pairs.filter { it.first > 0 && it.second > 0 }.map { ln(it.second.toDouble() / it.first) }
         val n = logs.size
         if (n == 0) return Result(1.0, 0, 0.0, 1.0, 1.0, false)
-        val sorted = logs.sorted()
-        val median = if (n % 2 == 1) sorted[n / 2] else (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+        val median = Trend.median(logs)
         val shrunk = median * n / (n + PRIOR_WEIGHT)
         val mean = logs.average()
         val sd = if (n > 1) sqrt(logs.sumOf { (it - mean) * (it - mean) } / (n - 1)) else 0.0

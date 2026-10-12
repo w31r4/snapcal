@@ -82,10 +82,14 @@ object Trend {
             val dx = points[j].first - points[i].first
             if (dx != 0.0) slopes += (points[j].second - points[i].second) / dx
         }
-        if (slopes.isEmpty()) return 0.0
-        slopes.sort()
-        val m = slopes.size / 2
-        return if (slopes.size % 2 == 1) slopes[m] else (slopes[m - 1] + slopes[m]) / 2
+        return if (slopes.isEmpty()) 0.0 else median(slopes)
+    }
+
+    fun median(values: List<Double>): Double {
+        require(values.isNotEmpty())
+        val s = values.sorted()
+        val m = s.size / 2
+        return if (s.size % 2 == 1) s[m] else (s[m - 1] + s[m]) / 2
     }
 
     /** Display-only smoothed weight line (exponential moving average, α = 0.1 as popularised by The Hacker's Diet). */
